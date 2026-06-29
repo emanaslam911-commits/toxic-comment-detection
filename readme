@@ -1,0 +1,81 @@
+# Toxic Comment Detection: A Multi-Model NLP Pipeline
+
+An advanced Natural Language Processing (NLP) pipeline built to perform multi-label classification on online comments. This project designs, implements, and benchmarks three distinct architectural paradigms—ranging from classical machine learning to state-of-the-art transformer networks—to automatically moderate and categorize toxic online discourse into 6 distinct classes.
+
+---
+
+## 👥 Authors & Institutional Context
+* **Authors:** Iqra Hamayoun & Eman Aslam
+* **Institution:** University of Management and Technology (UMT), Sialkot Campus
+* **Course:** Natural Language Processing (NLP) Course Project
+
+---
+
+## 📌 Project Overview & Objective
+Manual moderation cannot scale to keep pace with modern web scale environments. Online harassment is inherently **multi-label**, meaning a single text snippet can simultaneously be flagged across multiple overlapping categories (e.g., *obscene*, *insulting*, and *threatening*). 
+
+The goal of this project is to construct an end-to-end multi-label classification architecture that identifies the following categories from raw user text:
+1. `toxic`
+2. `severe_toxic`
+3. `obscene`
+4. `threat`
+5. `insult`
+6. `identity_hate`
+
+---
+
+## 📊 Dataset & Class Imbalance Strategy
+The project utilizes the **Jigsaw Toxic Comment Classification Dataset** (comprising Wikipedia Talk page comments):
+* **Training Data:** 159,571 samples
+* **Test Data:** 153,164 samples
+* **The Core Challenge:** ~78% of the data is completely clean. Rare categories like `threat` comprise less than **0.30%** of the dataset.
+
+### Rigorous Imbalance Mitigation
+Standard accuracy metrics fail when data is heavily skewed. This pipeline addresses the imbalance within the model layers themselves:
+* **Model 1 (TF-IDF + LR):** Configured with `class_weight='balanced'` to heavily penalize errors on minority target classifications during optimization.
+* **Model 2 (BiLSTM):** Uses a **Custom Weighted Binary Cross-Entropy Loss** function. Positive labels are up-weighted proportionally by their negative-to-positive ratio (capped at `10x` to avoid convergence instability).
+* **Evaluation Focus:** Primary benchmarking evaluates **Macro F1-Score** rather than global Accuracy, ensuring that rare toxic indicators carry equal weight in results.
+
+---
+
+## 🛠️ Model Architectures
+
+### 1. Baseline: TF-IDF + Logistic Regression
+* **Preprocessing:** Lowercasing, tokenization, stopword removal, and punctuation stripping.
+* **Vectorization:** Term Frequency-Inverse Document Frequency (TF-IDF).
+* **Classification:** One-vs-Rest (OvR) Logistic Regression.
+
+### 2. Deep Sequence Model: BiLSTM + Pretrained GloVe
+* **Embedding Layer:** Initialized using pretrained **GloVe 100-dimensional** vectors.
+* **Hidden Layer:** Bidirectional Long Short-Term Memory (BiLSTM) with 64 hidden units.
+* **Regularization:** Built-in spatial dropout (0.3) and recurrent dropout (0.2) to prevent overfitting.
+
+### 3. Deep Contextual Model: Fine-Tuned BERT Transformer
+* **Input Structure:** Fed with **raw, uncleaned text**. The `bert_en_uncased_preprocess` tokenization layer natively preserves structural features, casing, and syntactic signals.
+* **Core Network:** Fine-tuned `bert_en_uncased` encoder.
+* **Optimization:** Fine-tuned using the AdamW optimizer with a decoupled weight decay of `0.01` and a low contextual learning rate of `3e-5`.
+
+---
+
+## 📈 Benchmarking Results (Held-Out Test Set)
+
+| Model Architecture | Test Accuracy | Macro F1-Score | Architectural Role |
+| :--- | :---: | :---: | :--- |
+| **TF-IDF + Logistic Regression** | 79.83% | 0.4171 | Lightweight baseline; ultra-fast inference |
+| **BiLSTM + GloVe Embeddings** | 80.93% | 0.4655 | Sequential context tracking over long distances |
+| **Fine-Tuned BERT Transformer** | **86.79%** | **0.5875** | State-of-the-art bidirectional context learning |
+
+---
+
+## 🎯 Per-Class Evaluation Details (Fine-Tuned BERT)
+Evaluating BERT performance at an optimal discrimination threshold of $t = 0.35$ on the test set:
+
+* **`toxic`**: 90.52% Accuracy | True Positives: 5443 | False Positives: 5421
+* **`severe_toxic`**: 98.91% Accuracy | True Positives: 232 | False Positives: 563
+* **`obscene`**: 95.37% Accuracy | True Positives: 2984 | False Positives: 2252
+* **`threat`**: 99.56% Accuracy | True Positives: 137 | False Positives: 207
+* **`insult`**: 96.41% Accuracy | True Positives: 2433 | False Positives: 1300
+* **`identity_hate`**: 98.90% Accuracy | True Positives: 479 | False Positives: 471
+
+---
+
